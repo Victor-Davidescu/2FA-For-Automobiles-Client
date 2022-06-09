@@ -4,18 +4,28 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////
 package com.myapp;
 
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
 
 import android.annotation.SuppressLint;
+import android.app.KeyguardManager;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.hardware.biometrics.BiometricPrompt;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.CancellationSignal;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -28,18 +38,6 @@ public class MainActivity extends AppCompatActivity {
     // Other view components
     private Toolbar toolbar;
     private TextView txtViewRPiReply;
-
-    // Bluetooth device details
-    private String deviceName;
-    private String deviceAddress;
-
-    // Credentials
-    private String username;
-    private String pin;
-
-    private boolean connectedToDevice = false;
-    private boolean loggedIn = false;
-
 
     // Preferences variables
     public static final String PREFS_NAME = "sharedPrefs" ;
@@ -54,10 +52,22 @@ public class MainActivity extends AppCompatActivity {
     public final static int CONNECTING_STATUS = 1;
     public final static int MESSAGE_READ = 2;
 
+    // Biometric sensor related variables
+    private CancellationSignal cancellationSignal = null;
+    private BiometricPrompt.AuthenticationCallback authenticationCallback;
+
+    // Other variables
+    private String deviceName;
+    private String deviceAddress;
+    private String username;
+    private String pin;
+    private boolean connectedToDevice = false;
+    private boolean loggedIn = false;
 
     /**
      * Activity main function
      */
+    @RequiresApi(api = Build.VERSION_CODES.P)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -67,12 +77,14 @@ public class MainActivity extends AppCompatActivity {
         initView(); // Initialise the view components
         getDataPreferences(); // Get data preferences
         setupButtonsClickListeners(); // Setup click listeners for all buttons
+        initBiometric(); // Initialise biometric sensor
 
         // Disable vital view components
         btnConnectDisconnect.setEnabled(false);
         btnLoginLogout.setEnabled(false);
         btnSwitch.setEnabled(false);
         txtViewRPiReply.setText("");
+
         // Check if all required data is set and enable the connect button
         if(!checkPrefsData()) {
             toolbar.setSubtitle("Settings Incomplete");
@@ -91,7 +103,6 @@ public class MainActivity extends AppCompatActivity {
         btnConnectDisconnect = findViewById(R.id.btnConnectDisconnect);
         btnLoginLogout = findViewById(R.id.btnLoginLogout);
         btnSwitch = findViewById(R.id.btnSwitch);
-
         toolbar = findViewById(R.id.toolbar);
         txtViewRPiReply = findViewById(R.id.txtViewRPiReply);
     }
@@ -110,12 +121,63 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Setup the click listeners for all buttons
      */
+    @RequiresApi(api = Build.VERSION_CODES.P)
     private void setupButtonsClickListeners() {
         btnSettings.setOnClickListener(view -> goToSettings());
         btnConnectDisconnect.setOnClickListener(view -> clickConnectDisconnect());
         btnLoginLogout.setOnClickListener(view -> clickLoginLogout());
         btnSwitch.setOnClickListener(view -> clickRelay());
     }
+
+
+    /**
+     * Biometric sensor initializer
+     */
+    @RequiresApi(api = Build.VERSION_CODES.P)
+    private void initBiometric() {
+        authenticationCallback = new BiometricPrompt.AuthenticationCallback() {
+            @Override
+            public void onAuthenticationError(int errorCode, CharSequence errString) {
+                super.onAuthenticationError(errorCode, errString);
+                displayNotification("Authentication Error : " + errString);
+            }
+
+            @Override
+            public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
+                super.onAuthenticationSucceeded(result);
+                clientBluetoothThread.sendMessage("login-"+username+","+pin);
+                displayNotification("Authentication Succeeded");
+            }
+        };
+    }
+
+    /**
+     * Display biometric authentication
+     */
+    @RequiresApi(api = Build.VERSION_CODES.P)
+    private void displayBiometric() {
+        BiometricPrompt biometricPrompt = new BiometricPrompt.Builder(
+                getApplicationContext())
+                .setTitle("Login Authentication")
+                .setSubtitle("Fingerprint Sensore")
+                .setDescription("Use your fingerprint to login")
+                .setNegativeButton("Cancel", getMainExecutor(), new DialogInterface.OnClickListener() {
+                    @Override
+                    public void
+                    onClick(DialogInterface dialogInterface, int i)
+                    {
+                        displayNotification("Authentication Cancelled");
+                    }
+                }).build();
+
+        // start the authenticationCallback in
+        // mainExecutor
+        biometricPrompt.authenticate(
+                getCancellationSignal(),
+                getMainExecutor(),
+                authenticationCallback);
+    }
+
 
     private boolean checkPrefsData() {
         return deviceName != null && deviceAddress != null && username != null && pin != null;
@@ -181,9 +243,10 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Function for button login/logout
      */
+    @RequiresApi(api = Build.VERSION_CODES.P)
     private void clickLoginLogout() {
-        if(!loggedIn) { clientBluetoothThread.sendMessage("login-"+username+","+pin); }
-        else { clientBluetoothThread.sendMessage("logout"); }
+        if(!loggedIn) { displayBiometric(); }
+        else { clientBluetoothThread.sendMessage("logout");}
     }
 
     /**
@@ -244,5 +307,30 @@ public class MainActivity extends AppCompatActivity {
         loggedIn = false;
         btnLoginLogout.setText("login");
         btnSwitch.setEnabled(false);
+    }
+
+
+
+
+
+    private CancellationSignal getCancellationSignal()
+    {
+        cancellationSignal = new CancellationSignal();
+        cancellationSignal.setOnCancelListener(
+                new CancellationSignal.OnCancelListener() {
+                    @Override public void onCancel()
+                    {
+                        displayNotification("Authentication was Cancelled by the user");
+                    }
+                });
+        return cancellationSignal;
+    }
+
+    /**
+     * Display notification to the user
+     * @param message Message
+     */
+    private void displayNotification(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 }
