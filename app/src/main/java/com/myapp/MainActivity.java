@@ -7,15 +7,14 @@ package com.myapp;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
@@ -23,12 +22,12 @@ public class MainActivity extends AppCompatActivity {
     // Buttons
     private Button btnSettings;
     private Button btnConnectDisconnect;
-    private Button btnTmpSend; //TODO: In future needs removed
+    private Button btnLoginLogout;
+    private Button btnSwitch;
 
     // Other view components
     private Toolbar toolbar;
     private TextView txtViewRPiReply;
-    private EditText editTxtTmpMsg; //TODO: In future needs removed
 
     // Bluetooth device details
     private String deviceName;
@@ -39,6 +38,7 @@ public class MainActivity extends AppCompatActivity {
     private String pin;
 
     private boolean connectedToDevice = false;
+    private boolean loggedIn = false;
 
 
     // Preferences variables
@@ -57,7 +57,6 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Activity main function
-     * @param savedInstanceState
      */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,11 +70,9 @@ public class MainActivity extends AppCompatActivity {
 
         // Disable vital view components
         btnConnectDisconnect.setEnabled(false);
-        txtViewRPiReply.setText(""); //TODO: In future needs removed
-        btnTmpSend.setEnabled(false); //TODO: In future needs removed
-        editTxtTmpMsg.setEnabled(false); //TODO: In future needs removed
-
-
+        btnLoginLogout.setEnabled(false);
+        btnSwitch.setEnabled(false);
+        txtViewRPiReply.setText("");
         // Check if all required data is set and enable the connect button
         if(!checkPrefsData()) {
             toolbar.setSubtitle("Settings Incomplete");
@@ -92,10 +89,11 @@ public class MainActivity extends AppCompatActivity {
     private void initView() {
         btnSettings = findViewById(R.id.btnSettings);
         btnConnectDisconnect = findViewById(R.id.btnConnectDisconnect);
-        btnTmpSend = findViewById(R.id.btnTmpSend); //TODO: In future needs removed
+        btnLoginLogout = findViewById(R.id.btnLoginLogout);
+        btnSwitch = findViewById(R.id.btnSwitch);
+
         toolbar = findViewById(R.id.toolbar);
         txtViewRPiReply = findViewById(R.id.txtViewRPiReply);
-        editTxtTmpMsg = findViewById(R.id.editTxtMsg); //TODO: In future needs removed
     }
 
     /**
@@ -113,31 +111,14 @@ public class MainActivity extends AppCompatActivity {
      * Setup the click listeners for all buttons
      */
     private void setupButtonsClickListeners() {
-        btnSettings.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                goToSettings();}
-        });
-
-        btnConnectDisconnect.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                connectDisconnect();}
-        });
-
-        btnTmpSend.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                sendMsg();}
-        });
+        btnSettings.setOnClickListener(view -> goToSettings());
+        btnConnectDisconnect.setOnClickListener(view -> clickConnectDisconnect());
+        btnLoginLogout.setOnClickListener(view -> clickLoginLogout());
+        btnSwitch.setOnClickListener(view -> clickRelay());
     }
 
     private boolean checkPrefsData() {
-        if(deviceName != null && deviceAddress != null && username != null && pin != null) {
-            return true;
-        } else {
-            return false;
-        }
+        return deviceName != null && deviceAddress != null && username != null && pin != null;
     }
 
     /**
@@ -150,21 +131,20 @@ public class MainActivity extends AppCompatActivity {
             public void handleMessage(Message msg){
                 switch (msg.what){
                     case CONNECTING_STATUS:
-                        switch(msg.arg1){
-
+                        switch(msg.arg1) {
                             case 1:
-                                eventConnected();
+                                stateConnected();
+                                btnConnectDisconnect.setEnabled(true);
                                 break;
-
                             case -1:
-                                eventDisconnected();
+                                stateDisconnected();
                                 break;
                         }
                         break;
 
                     case MESSAGE_READ:
                         String rpiMsg = msg.obj.toString(); // Read message from Arduino
-                        txtViewRPiReply.setText("Reply: " + rpiMsg);
+                        processReplyMsg(rpiMsg);
                         break;
                 }
             }
@@ -182,17 +162,16 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Function for the connect/disconnect button
      */
-    private void connectDisconnect() {
+    private void clickConnectDisconnect() {
         // Check if there is already a connection
         if(!connectedToDevice) {
             toolbar.setSubtitle("Connecting to " + deviceName + " ...");
+            btnConnectDisconnect.setEnabled(false);
             clientBluetoothThread = new ClientBluetoothThread(deviceAddress);
             mainLoop();
             clientBluetoothThread.start();
-            btnConnectDisconnect.setEnabled(false);
-
         } else {
-            btnConnectDisconnect.setEnabled(false);
+            stateDisconnected();
             clientBluetoothThread.sendMessage("disconnect");
             clientBluetoothThread.keepRunning = false;
             try {clientBluetoothThread.join();} catch (InterruptedException e) {e.printStackTrace();}
@@ -200,35 +179,70 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Function for the send button
-     * TODO: This needs removed in future
+     * Function for button login/logout
      */
-    private void sendMsg() {
-        String msg = editTxtTmpMsg.getText().toString();
-        editTxtTmpMsg.setText("");
-        clientBluetoothThread.sendMessage(msg);
+    private void clickLoginLogout() {
+        if(!loggedIn) { clientBluetoothThread.sendMessage("login-"+username+","+pin); }
+        else { clientBluetoothThread.sendMessage("logout"); }
     }
 
     /**
-     * Run this function when a device is connected
+     * Function for sending command to lock/unlock the switch
      */
-    private void eventConnected() {
-        toolbar.setSubtitle("Connected to " + deviceName);
+    private void clickRelay() { clientBluetoothThread.sendMessage("switch"); }
+
+    /**
+     * Processes the messages received from the raspberry pi
+     * @param msg String
+     */
+    private void processReplyMsg(String msg) {
+        txtViewRPiReply.setText(String.format("Reply: %s", msg));
+        switch (msg) {
+            case "logged out":
+                stateLoggedOut();
+                break;
+            case "logged in":
+                stateLoggedIn();
+                break;
+        }
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void stateConnected() {
+        connectedToDevice = true;
+        loggedIn = false;
+        toolbar.setSubtitle("Connected.");
         btnConnectDisconnect.setText("disconnect");
-        btnConnectDisconnect.setEnabled(true);
-        btnTmpSend.setEnabled(true); //TODO: In future needs removed
-        editTxtTmpMsg.setEnabled(true); //TODO: In future needs removed
+        btnLoginLogout.setEnabled(true);
+        btnSwitch.setEnabled(false);
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void stateDisconnected() {
+        connectedToDevice = false;
+        stateLoggedOut();
+        toolbar.setSubtitle("Disconnected.");
+        btnConnectDisconnect.setText("connect");
+        btnLoginLogout.setEnabled(false);
     }
 
     /**
-     * Run this function when a device is disconnected.
+     * Change some view components based on logged in but still connected.
      */
-    private void eventDisconnected() {
-        toolbar.setSubtitle("Ready to connect");
-        btnConnectDisconnect.setText("connect");
-        btnConnectDisconnect.setEnabled(true);
-        txtViewRPiReply.setText(""); //TODO: In future needs removed
-        btnTmpSend.setEnabled(false); //TODO: In future needs removed
-        editTxtTmpMsg.setEnabled(false); //TODO: In future needs removed
+    @SuppressLint("SetTextI18n")
+    private void stateLoggedIn() {
+        loggedIn = true;
+        btnLoginLogout.setText("logout");
+        btnSwitch.setEnabled(true);
+    }
+
+    /**
+     * Change some view components based on logged out state, but still connected.
+     */
+    @SuppressLint("SetTextI18n")
+    private void stateLoggedOut() {
+        loggedIn = false;
+        btnLoginLogout.setText("login");
+        btnSwitch.setEnabled(false);
     }
 }
