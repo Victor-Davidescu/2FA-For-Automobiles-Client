@@ -7,15 +7,10 @@ package com.myapp;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.app.ActivityCompat;
-
 import android.annotation.SuppressLint;
-import android.app.KeyguardManager;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.hardware.biometrics.BiometricPrompt;
 import android.os.Build;
 import android.os.Bundle;
@@ -45,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String PREFS_DEVICE_ADDRESS = "deviceAddress";
     public static final String PREFS_USERNAME = "username";
     public static final String PREFS_PIN = "pin";
+    public static final String PREFS_USE_BIOMETRIC = "biometric";
 
     // Variables for bluetooth connections
     public static Handler handler;
@@ -159,16 +155,9 @@ public class MainActivity extends AppCompatActivity {
         BiometricPrompt biometricPrompt = new BiometricPrompt.Builder(
                 getApplicationContext())
                 .setTitle("Login Authentication")
-                .setSubtitle("Fingerprint Sensore")
+                .setSubtitle("Fingerprint Sensor")
                 .setDescription("Use your fingerprint to login")
-                .setNegativeButton("Cancel", getMainExecutor(), new DialogInterface.OnClickListener() {
-                    @Override
-                    public void
-                    onClick(DialogInterface dialogInterface, int i)
-                    {
-                        displayNotification("Authentication Cancelled");
-                    }
-                }).build();
+                .setNegativeButton("Cancel", getMainExecutor(), (dialogInterface, i) -> displayNotification("Authentication Cancelled")).build();
 
         // start the authenticationCallback in
         // mainExecutor
@@ -245,8 +234,12 @@ public class MainActivity extends AppCompatActivity {
      */
     @RequiresApi(api = Build.VERSION_CODES.P)
     private void clickLoginLogout() {
-        if(!loggedIn) { displayBiometric(); }
-        else { clientBluetoothThread.sendMessage("logout");}
+        if(!loggedIn) {
+            displayBiometric();
+        }
+        else {
+            clientBluetoothThread.sendMessage("logout");
+        }
     }
 
     /**
@@ -309,20 +302,10 @@ public class MainActivity extends AppCompatActivity {
         btnSwitch.setEnabled(false);
     }
 
-
-
-
-
     private CancellationSignal getCancellationSignal()
     {
         cancellationSignal = new CancellationSignal();
-        cancellationSignal.setOnCancelListener(
-                new CancellationSignal.OnCancelListener() {
-                    @Override public void onCancel()
-                    {
-                        displayNotification("Authentication was Cancelled by the user");
-                    }
-                });
+        cancellationSignal.setOnCancelListener(() -> displayNotification("Authentication was Cancelled by the user"));
         return cancellationSignal;
     }
 
