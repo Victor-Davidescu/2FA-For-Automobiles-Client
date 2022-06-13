@@ -18,6 +18,7 @@ import android.os.CancellationSignal;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -40,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String PREFS_DEVICE_ADDRESS = "deviceAddress";
     public static final String PREFS_USERNAME = "username";
     public static final String PREFS_PIN = "pin";
-    public static final String PREFS_USE_BIOMETRIC = "biometric";
+    public static final String PREFS_SECRET_KEY= "secretKey";
 
     // Variables for bluetooth connections
     public static Handler handler;
@@ -57,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
     private String deviceAddress;
     private String username;
     private String pin;
+    private String secretKey;
     private boolean connectedToDevice = false;
     private boolean loggedIn = false;
 
@@ -112,6 +114,7 @@ public class MainActivity extends AppCompatActivity {
         deviceAddress = sharedPreferences.getString(PREFS_DEVICE_ADDRESS, null);
         username = sharedPreferences.getString(PREFS_USERNAME, null);
         pin = sharedPreferences.getString(PREFS_PIN, null);
+        secretKey = sharedPreferences.getString(PREFS_SECRET_KEY, null);
     }
 
     /**
@@ -141,7 +144,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
                 super.onAuthenticationSucceeded(result);
-                clientBluetoothThread.sendMessage("login-"+username+","+pin);
+                clientBluetoothThread.sendMessage(secretKey,"login-"+username+","+pin);
                 displayNotification("Authentication Succeeded");
             }
         };
@@ -169,7 +172,11 @@ public class MainActivity extends AppCompatActivity {
 
 
     private boolean checkPrefsData() {
-        return deviceName != null && deviceAddress != null && username != null && pin != null;
+        return deviceName != null
+                && deviceAddress != null
+                && username != null
+                && pin != null
+                && secretKey != null;
     }
 
     /**
@@ -195,6 +202,8 @@ public class MainActivity extends AppCompatActivity {
 
                     case MESSAGE_READ:
                         String rpiMsg = msg.obj.toString(); // Read message from Arduino
+                        rpiMsg = rpiMsg.replaceAll("[\\n\\t ]", ""); //remove newline
+                        rpiMsg = Encryption.DecryptMessage(secretKey, rpiMsg);
                         processReplyMsg(rpiMsg);
                         break;
                 }
@@ -223,7 +232,7 @@ public class MainActivity extends AppCompatActivity {
             clientBluetoothThread.start();
         } else {
             stateDisconnected();
-            clientBluetoothThread.sendMessage("disconnect");
+            clientBluetoothThread.sendMessage(secretKey, "disconnect");
             clientBluetoothThread.keepRunning = false;
             try {clientBluetoothThread.join();} catch (InterruptedException e) {e.printStackTrace();}
         }
@@ -238,20 +247,22 @@ public class MainActivity extends AppCompatActivity {
             displayBiometric();
         }
         else {
-            clientBluetoothThread.sendMessage("logout");
+
+            clientBluetoothThread.sendMessage(secretKey,"logout");
         }
     }
 
     /**
      * Function for sending command to lock/unlock the switch
      */
-    private void clickRelay() { clientBluetoothThread.sendMessage("switch"); }
+    private void clickRelay() { clientBluetoothThread.sendMessage(secretKey, "switch"); }
 
     /**
      * Processes the messages received from the raspberry pi
      * @param msg String
      */
     private void processReplyMsg(String msg) {
+        msg = msg.replaceAll("[\\n\\t]","");
         txtViewRPiReply.setText(String.format("Reply: %s", msg));
         switch (msg) {
             case "logged out":

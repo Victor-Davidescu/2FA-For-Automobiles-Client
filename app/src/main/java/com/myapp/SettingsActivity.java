@@ -13,7 +13,6 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,24 +21,25 @@ public class SettingsActivity extends AppCompatActivity {
     //Buttons
     private Button btnSelect;
     private Button btnCleanData;
-    private Button btnSaveData;
+    private Button btnSaveCredentials;
     private Button btnBack;
-    @SuppressLint("UseSwitchCompatOrMaterialCode")
-    private Switch switchFingerprint;
+    private Button btnSaveSecretKey;
 
     // Other view components
     private TextView txtViewDeviceName;
     private TextView txtViewDeviceAddress;
     private TextView txtViewCredentialsStatus;
+    private TextView txtViewSecretKeyStatus;
     private EditText txtEditUsername;
     private EditText txtEditPin;
+    private EditText txtEditSecretKey;
 
     // Other variables
     private String deviceName = null;
     private String deviceAddress = null;
     private String username = null;
     private String pin = null;
-    private Boolean useBiometric;
+    private String secretKey = null;
 
 
     @Override
@@ -53,28 +53,32 @@ public class SettingsActivity extends AppCompatActivity {
         setupButtonsClickListeners();
         displayTextViewsForBtDevice();
         displayCredentialsView();
-        switchFingerprint.setChecked(useBiometric);
+        displaySecretKeyStatus();
     }
 
     private void initView() {
         btnBack = findViewById(R.id.btnSettingsBack);
         btnSelect = findViewById(R.id.btnSelectDevice);
         btnCleanData = findViewById(R.id.btnCleanData);
-        btnSaveData = findViewById(R.id.btnSaveData);
-        switchFingerprint = findViewById(R.id.switchFingerprint);
+        btnSaveCredentials = findViewById(R.id.btnSaveData);
+        btnSaveSecretKey = findViewById(R.id.btnSaveKey);
+
         txtViewDeviceName = findViewById(R.id.txtViewName);
         txtViewDeviceAddress = findViewById(R.id.txtViewAddress);
         txtViewCredentialsStatus = findViewById(R.id.txtViewCredentialsStatus);
+        txtViewSecretKeyStatus = findViewById(R.id.txtViewSecretKeyStatus);
+
         txtEditUsername = findViewById(R.id.editTxtUsername);
         txtEditPin = findViewById(R.id.editTxtPin);
+        txtEditSecretKey = findViewById(R.id.editTxtSecretKey);
     }
 
     private void setupButtonsClickListeners() {
         btnBack.setOnClickListener(view -> goBack());
         btnSelect.setOnClickListener(view -> selectBtDevice());
         btnCleanData.setOnClickListener(view -> cleanPreferencesData());
-        btnSaveData.setOnClickListener(view -> saveCredentials());
-        switchFingerprint.setOnClickListener(view -> enableDisableBiometric());
+        btnSaveCredentials.setOnClickListener(view -> saveCredentials());
+        btnSaveSecretKey.setOnClickListener(view -> saveSecretKey());
     }
 
     private void getDataPreferences() {
@@ -83,7 +87,7 @@ public class SettingsActivity extends AppCompatActivity {
         deviceAddress = sharedPreferences.getString(MainActivity.PREFS_DEVICE_ADDRESS, null);
         username = sharedPreferences.getString(MainActivity.PREFS_USERNAME, null);
         pin = sharedPreferences.getString(MainActivity.PREFS_PIN, null);
-        useBiometric = sharedPreferences.getBoolean(MainActivity.PREFS_USE_BIOMETRIC, false);
+        secretKey = sharedPreferences.getString(MainActivity.PREFS_SECRET_KEY, null);
     }
 
     @SuppressLint("SetTextI18n")
@@ -106,6 +110,15 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressLint("SetTextI18n")
+    private void displaySecretKeyStatus() {
+        if(secretKey != null) {
+            txtViewSecretKeyStatus.setText("Key stored.");
+        } else {
+            txtViewSecretKeyStatus.setText("No key stored.");
+        }
+    }
+
     private void goBack() {
         Intent intent = new Intent(SettingsActivity.this, MainActivity.class);
         startActivity(intent);
@@ -114,17 +127,6 @@ public class SettingsActivity extends AppCompatActivity {
     private void selectBtDevice() {
         Intent intent = new Intent(SettingsActivity.this, SelectDeviceActivity.class);
         startActivity(intent);
-    }
-
-    private void enableDisableBiometric() {
-        useBiometric = switchFingerprint.isChecked();
-        SharedPreferences sharedPreferences = this.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putBoolean(MainActivity.PREFS_USE_BIOMETRIC, useBiometric);
-        editor.apply();
-
-        if(useBiometric) { displayNotification("Biometric sensor enabled."); }
-        else { displayNotification("Biometric sensor disabled."); }
     }
 
     private void saveCredentials() {
@@ -138,6 +140,16 @@ public class SettingsActivity extends AppCompatActivity {
         editor.putString(MainActivity.PREFS_PIN, pin);
         editor.apply();
         displayNotification("Credentials saved.");
+    }
+
+    private void saveSecretKey() {
+        SharedPreferences sharedPreferences = this.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        secretKey = txtEditSecretKey.getText().toString();
+        txtEditSecretKey.setText("");
+        editor.putString(MainActivity.PREFS_SECRET_KEY, secretKey);
+        editor.apply();
+        displayNotification("Secret key saved.");
     }
 
     private void cleanPreferencesData() {

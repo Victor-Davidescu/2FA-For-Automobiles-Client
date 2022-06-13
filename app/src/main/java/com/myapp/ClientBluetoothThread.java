@@ -28,7 +28,6 @@ public class ClientBluetoothThread extends Thread {
     // Other variables
     public boolean connectedToDevice = false;
     public boolean keepRunning = true;
-    //private String deviceAddress;
 
     /**
      * Class constructor
@@ -97,7 +96,10 @@ public class ClientBluetoothThread extends Thread {
      * Send message to the bluetooth device
      * @param msg String message
      */
-    public void sendMessage(String msg) {
+    public void sendMessage(String key, String msg) {
+        msg = Encryption.EncryptMessage(key, msg); // Encrypt msg
+        key = null;
+
         byte[] bytes = msg.getBytes(); //converts entered String into bytes
         try {
             btOutStream.write(bytes);
