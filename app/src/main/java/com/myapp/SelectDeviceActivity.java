@@ -1,20 +1,22 @@
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//  AUTHOR: VICTOR-FLORIAN DAVIDESCU
+//  SID: 1705734
+////////////////////////////////////////////////////////////////////////////////////////////////
 package com.myapp;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Button;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public class SelectDeviceActivity extends AppCompatActivity {
@@ -23,14 +25,11 @@ public class SelectDeviceActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_select_device);
-        getSupportActionBar().hide();
+        Objects.requireNonNull(getSupportActionBar()).hide();
 
         //Back button
         Button btnBack = findViewById(R.id.btnBack);
-        btnBack.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {goBack();}
-        });
+        btnBack.setOnClickListener(view -> goBack());
 
         // Get the default bluetooth adapter
         BluetoothAdapter btAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -45,9 +44,6 @@ public class SelectDeviceActivity extends AppCompatActivity {
             // Put paired devices in a list and display them
             List<Object> deviceList = getDeviceInfoList(pairedDevices);
             displayPairedDevices(deviceList );
-
-        } else {
-
         }
     }
 

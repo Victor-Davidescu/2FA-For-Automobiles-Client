@@ -16,6 +16,8 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.Objects;
+
 public class SettingsActivity extends AppCompatActivity {
 
     //Buttons
@@ -48,13 +50,12 @@ public class SettingsActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
-        getSupportActionBar().hide();
+        Objects.requireNonNull(getSupportActionBar()).hide();
 
-        initView();
-        initDataPreferences();
-
-        getDataPreferences();
-        setupButtonsClickListeners();
+        initView(); // Initialise all view components
+        initDataPreferences(); // Initialise the data preferences
+        getDataPreferences(); // Get all data from the data preferences
+        setupButtonsClickListeners(); // Setup functions for button listeners
         displayTextViewsForBtDevice();
         displayCredentialsView();
         displaySecretKeyStatus();
@@ -149,6 +150,7 @@ public class SettingsActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
+    @SuppressLint("SetTextI18n")
     private void saveCredentials() {
         SharedPreferences.Editor editor = sharedPreferences.edit();
         username = txtEditUsername.getText().toString();
@@ -162,6 +164,7 @@ public class SettingsActivity extends AppCompatActivity {
         displayNotification("Credentials saved.");
     }
 
+    @SuppressLint("SetTextI18n")
     private void saveSecretKey() {
         SharedPreferences.Editor editor = sharedPreferences.edit();
         secretKey = txtEditSecretKey.getText().toString();

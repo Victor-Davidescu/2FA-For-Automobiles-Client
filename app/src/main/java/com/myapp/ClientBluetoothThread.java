@@ -19,7 +19,7 @@ import static android.content.ContentValues.TAG;
 public class ClientBluetoothThread extends Thread {
 
     // Bluetooth related variables
-    private BluetoothDevice btDevice;
+    private final BluetoothDevice btDevice;
     private final BluetoothAdapter btAdapter;
     private BluetoothSocket btSocket;
     private InputStream btInStream;
@@ -28,6 +28,8 @@ public class ClientBluetoothThread extends Thread {
     // Other variables
     public boolean connectedToDevice = false;
     public boolean keepRunning = true;
+    private String logTag = "BT Thread";
+
 
     /**
      * Class constructor
@@ -36,6 +38,7 @@ public class ClientBluetoothThread extends Thread {
         btAdapter = BluetoothAdapter.getDefaultAdapter();
         btDevice = btAdapter.getRemoteDevice(address);
     }
+
 
     /**
      * Initialises the bluetooth socket
@@ -97,14 +100,18 @@ public class ClientBluetoothThread extends Thread {
      * @param msg String message
      */
     public void sendMessage(String key, String msg) {
-        msg = Encryption.EncryptMessage(key, msg); // Encrypt msg
-        key = null;
+        String encryptedMsg = Encryption.EncryptMessage(key, msg); // Encrypt msg
 
-        byte[] bytes = msg.getBytes(); //converts entered String into bytes
-        try {
-            btOutStream.write(bytes);
-        } catch (IOException e) {
-            Log.e("Send Error","Unable to send message",e);
+        if (encryptedMsg != null) {
+            byte[] bytes = msg.getBytes();
+            try {
+                btOutStream.write(bytes);
+            } catch (IOException e) {
+                Log.e("Send Error","Unable to send message",e);
+            }
+
+        } else {
+            Log.e(logTag,"Received empty encrypted message.");
         }
     }
 
@@ -153,16 +160,12 @@ public class ClientBluetoothThread extends Thread {
      * Client bluetooth handler main function
      */
     public void run() {
-
         // Initialise the bluetooth socket
         if(initialiseSocket()) {
-
             // Establish a connection with the bluetooth device
             if(establishConnection()) {
-
                 // Establish input/output stream
                 if(establishIO()) {
-
                     // Enter in the main loop for this thread
                     threadMainLoop();
                 }

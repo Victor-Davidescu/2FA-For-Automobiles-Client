@@ -3,10 +3,12 @@
 //  SID: 1705734
 //
 //  The code is a modified version from the GitHub project: https://github.com/ijl20/python_java_crypto
+// TODO: add a proper ARU HARVARD REFERENCING HERE
 ////////////////////////////////////////////////////////////////////////////////////////////////
 package com.myapp;
 
 import android.annotation.SuppressLint;
+import android.util.Log;
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 import javax.crypto.spec.IvParameterSpec;
@@ -17,6 +19,7 @@ import java.lang.*;
 import java.util.Random;
 
 public class Encryption {
+    private static final String logTag = "BT Thread";
 
     public static String EncryptMessage(String key, String message) {
         try {
@@ -48,7 +51,7 @@ public class Encryption {
             return encryptedMessage;
 
         } catch (Exception err) {
-            err.printStackTrace();
+            Log.e(logTag,"Failed to encrypt message. "+ err);
             return null;
         }
     }
@@ -72,8 +75,8 @@ public class Encryption {
             // Return plaintext as String
             return new String(byte_array, StandardCharsets.UTF_8);
 
-        } catch (Exception ex) {
-            ex.printStackTrace();
+        } catch (Exception err) {
+            Log.e(logTag,"Failed to decrypt message. "+ err);
             return null;
         }
     }

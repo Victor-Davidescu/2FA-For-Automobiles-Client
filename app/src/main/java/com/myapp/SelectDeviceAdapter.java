@@ -1,3 +1,7 @@
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//  AUTHOR: VICTOR-FLORIAN DAVIDESCU
+//  SID: 1705734
+////////////////////////////////////////////////////////////////////////////////////////////////
 package com.myapp;
 
 import android.content.Context;
@@ -12,19 +16,13 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.security.crypto.EncryptedSharedPreferences;
 import androidx.security.crypto.MasterKeys;
-
 import java.util.List;
 
 public class SelectDeviceAdapter extends RecyclerView.Adapter<SelectDeviceAdapter.ViewHolder> {
 
     private final Context context;
     private final List<Object> deviceList;
-    public static final String SHARED_PREFS = "sharedPrefs" ;
-    public static final String DEVICE_NAME = "deviceName";
-    public static final String DEVICE_ADDRESS = "deviceAddress";
-
     private SharedPreferences sharedPreferences;
-
 
     /**
      * Class Constructor
@@ -35,7 +33,6 @@ public class SelectDeviceAdapter extends RecyclerView.Adapter<SelectDeviceAdapte
         this.context = context;
         this.deviceList = deviceList;
     }
-
 
     @NonNull
     @Override
@@ -72,8 +69,8 @@ public class SelectDeviceAdapter extends RecyclerView.Adapter<SelectDeviceAdapte
 
             initDataPreferences();
             SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putString(DEVICE_NAME, deviceInfo.getName());
-            editor.putString(DEVICE_ADDRESS, deviceInfo.getAddress());
+            editor.putString(MainActivity.PREFS_DEVICE_NAME, deviceInfo.getName());
+            editor.putString(MainActivity.PREFS_DEVICE_ADDRESS, deviceInfo.getAddress());
             editor.apply();
 
             // Call MainActivity

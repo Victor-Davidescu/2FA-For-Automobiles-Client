@@ -9,7 +9,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.security.crypto.EncryptedSharedPreferences;
 import androidx.security.crypto.MasterKeys;
-
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -23,6 +22,7 @@ import android.os.Message;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -50,10 +50,6 @@ public class MainActivity extends AppCompatActivity {
     public final static int CONNECTING_STATUS = 1;
     public final static int MESSAGE_READ = 2;
 
-    // Biometric sensor related variables
-    private CancellationSignal cancellationSignal = null;
-    private BiometricPrompt.AuthenticationCallback authenticationCallback;
-
     // Other variables
     private String deviceName;
     private String deviceAddress;
@@ -62,9 +58,8 @@ public class MainActivity extends AppCompatActivity {
     private String secretKey;
     private boolean connectedToDevice = false;
     private boolean loggedIn = false;
-
     private SharedPreferences sharedPreferences;
-    private String masterKey;
+    private BiometricPrompt.AuthenticationCallback authenticationCallback;
 
     /**
      * Activity main function
@@ -74,13 +69,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        getSupportActionBar().hide(); // Hide the activity toolbar
+        Objects.requireNonNull(getSupportActionBar()).hide(); // Hide the activity toolbar
 
         initView(); // Initialise the view components
-
-        initDataPreferences();
-
-        getDataPreferences(); // Get data preferences
+        initSharedPreferences(); // Initialise the shared preferences
+        getDataFromSharedPreferences(); // Get data preferences
         setupButtonsClickListeners(); // Setup click listeners for all buttons
         initBiometric(); // Initialise biometric sensor
         stateStart(); // Put the view components in a start state
@@ -98,9 +91,12 @@ public class MainActivity extends AppCompatActivity {
         txtViewRPiReply = findViewById(R.id.txtViewRPiReply);
     }
 
-    private void initDataPreferences() {
+    /**
+     * Initialise the shared preferences
+     */
+    private void initSharedPreferences() {
         try {
-            masterKey = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC);
+            String masterKey = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC);
             sharedPreferences = EncryptedSharedPreferences.create(
                     MainActivity.PREFS_NAME,
                     masterKey,
@@ -118,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * Get preferences data
      */
-    private void getDataPreferences() {
+    private void getDataFromSharedPreferences() {
         deviceName = sharedPreferences.getString(PREFS_DEVICE_NAME, null);
         deviceAddress = sharedPreferences.getString(PREFS_DEVICE_ADDRESS, null);
         username = sharedPreferences.getString(PREFS_USERNAME, null);
@@ -179,8 +175,11 @@ public class MainActivity extends AppCompatActivity {
                 authenticationCallback);
     }
 
-
-    private boolean checkPrefsData() {
+    /**
+     * Check if all necessary data is obtained from shared preferences
+     * @return True or False
+     */
+    private boolean isAllDataAvailableFromSharedPrefs() {
         return deviceName != null
                 && deviceAddress != null
                 && username != null
@@ -258,7 +257,6 @@ public class MainActivity extends AppCompatActivity {
             displayBiometric();
         }
         else {
-
             clientBluetoothThread.sendMessage(secretKey,"logout");
         }
     }
@@ -277,9 +275,11 @@ public class MainActivity extends AppCompatActivity {
         txtViewRPiReply.setText(String.format("Reply: %s", msg));
         switch (msg) {
             case "logged out":
+                displayNotification("Logged out.");
                 stateLoggedOut();
                 break;
             case "logged in":
+                displayNotification("Login successful.");
                 stateLoggedIn();
                 break;
         }
@@ -293,14 +293,16 @@ public class MainActivity extends AppCompatActivity {
         txtViewRPiReply.setText("");
 
         // Check if all required data is set and enable the connect button
-        if(!checkPrefsData()) {
+        if(!isAllDataAvailableFromSharedPrefs()) {
             toolbar.setSubtitle("Settings Incomplete");
-
         } else {
             stateDisconnected();
         }
     }
 
+    /**
+     * Change some view components based on just connected state
+     */
     @SuppressLint("SetTextI18n")
     private void stateConnected() {
         connectedToDevice = true;
@@ -311,6 +313,9 @@ public class MainActivity extends AppCompatActivity {
         btnSwitch.setEnabled(false);
     }
 
+    /**
+     * Change some view components based on disconnected state
+     */
     @SuppressLint("SetTextI18n")
     private void stateDisconnected() {
         connectedToDevice = false;
@@ -326,7 +331,6 @@ public class MainActivity extends AppCompatActivity {
      */
     @SuppressLint("SetTextI18n")
     private void stateLoggedIn() {
-        displayNotification("Login successful.");
         loggedIn = true;
         btnLoginLogout.setText("logout");
         btnSwitch.setEnabled(true);
@@ -337,15 +341,16 @@ public class MainActivity extends AppCompatActivity {
      */
     @SuppressLint("SetTextI18n")
     private void stateLoggedOut() {
-        displayNotification("Logged out.");
         loggedIn = false;
         btnLoginLogout.setText("login");
         btnSwitch.setEnabled(false);
     }
 
-    private CancellationSignal getCancellationSignal()
-    {
-        cancellationSignal = new CancellationSignal();
+    /**
+     * Biometric Cancel signal
+     */
+    private CancellationSignal getCancellationSignal() {
+        CancellationSignal cancellationSignal = new CancellationSignal();
         cancellationSignal.setOnCancelListener(() -> displayNotification("Authentication was Cancelled by the user"));
         return cancellationSignal;
     }
