@@ -7,8 +7,10 @@ package com.myapp;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.security.crypto.EncryptedSharedPreferences;
+import androidx.security.crypto.MasterKeys;
+
 import android.annotation.SuppressLint;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.hardware.biometrics.BiometricPrompt;
@@ -18,7 +20,6 @@ import android.os.CancellationSignal;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -62,6 +63,9 @@ public class MainActivity extends AppCompatActivity {
     private boolean connectedToDevice = false;
     private boolean loggedIn = false;
 
+    private SharedPreferences sharedPreferences;
+    private String masterKey;
+
     /**
      * Activity main function
      */
@@ -73,6 +77,9 @@ public class MainActivity extends AppCompatActivity {
         getSupportActionBar().hide(); // Hide the activity toolbar
 
         initView(); // Initialise the view components
+
+        initDataPreferences();
+
         getDataPreferences(); // Get data preferences
         setupButtonsClickListeners(); // Setup click listeners for all buttons
         initBiometric(); // Initialise biometric sensor
@@ -91,11 +98,27 @@ public class MainActivity extends AppCompatActivity {
         txtViewRPiReply = findViewById(R.id.txtViewRPiReply);
     }
 
+    private void initDataPreferences() {
+        try {
+            masterKey = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC);
+            sharedPreferences = EncryptedSharedPreferences.create(
+                    MainActivity.PREFS_NAME,
+                    masterKey,
+                    this,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            );
+
+        } catch (Exception e) {
+            displayNotification("Failed to get data preferences");
+            e.printStackTrace();
+        }
+    }
+
     /**
      * Get preferences data
      */
     private void getDataPreferences() {
-        SharedPreferences sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         deviceName = sharedPreferences.getString(PREFS_DEVICE_NAME, null);
         deviceAddress = sharedPreferences.getString(PREFS_DEVICE_ADDRESS, null);
         username = sharedPreferences.getString(PREFS_USERNAME, null);

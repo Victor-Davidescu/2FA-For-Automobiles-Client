@@ -8,13 +8,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.security.crypto.EncryptedSharedPreferences;
+import androidx.security.crypto.MasterKeys;
+
 import java.util.List;
 
 public class SelectDeviceAdapter extends RecyclerView.Adapter<SelectDeviceAdapter.ViewHolder> {
@@ -24,6 +22,8 @@ public class SelectDeviceAdapter extends RecyclerView.Adapter<SelectDeviceAdapte
     public static final String SHARED_PREFS = "sharedPrefs" ;
     public static final String DEVICE_NAME = "deviceName";
     public static final String DEVICE_ADDRESS = "deviceAddress";
+
+    private SharedPreferences sharedPreferences;
 
 
     /**
@@ -44,6 +44,22 @@ public class SelectDeviceAdapter extends RecyclerView.Adapter<SelectDeviceAdapte
         return new ViewHolder(view);
     }
 
+    private void initDataPreferences() {
+        try {
+            String masterKey = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC);
+            sharedPreferences = EncryptedSharedPreferences.create(
+                    MainActivity.PREFS_NAME,
+                    masterKey,
+                    this.context,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            );
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     @Override
     public void onBindViewHolder(@NonNull SelectDeviceAdapter.ViewHolder holder, int position) {
         final DeviceInfo deviceInfo = (DeviceInfo) deviceList.get(position);
@@ -54,17 +70,11 @@ public class SelectDeviceAdapter extends RecyclerView.Adapter<SelectDeviceAdapte
         holder.linearLayout.setOnClickListener(view -> {
             Intent intent = new Intent(context,SettingsActivity.class);
 
-            SharedPreferences sharedPreferences = context.getSharedPreferences(SHARED_PREFS, Context.MODE_PRIVATE);
+            initDataPreferences();
             SharedPreferences.Editor editor = sharedPreferences.edit();
-
             editor.putString(DEVICE_NAME, deviceInfo.getName());
             editor.putString(DEVICE_ADDRESS, deviceInfo.getAddress());
             editor.apply();
-
-            // Send device details to the MainActivity
-            //intent.putExtra("deviceName", deviceInfo.getName());
-            //intent.putExtra("deviceAddress",deviceInfo.getAddress());
-
 
             // Call MainActivity
             context.startActivity(intent);

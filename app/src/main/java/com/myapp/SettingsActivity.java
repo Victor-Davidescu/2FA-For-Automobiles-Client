@@ -5,9 +5,9 @@
 package com.myapp;
 
 import androidx.appcompat.app.AppCompatActivity;
-
+import androidx.security.crypto.EncryptedSharedPreferences;
+import androidx.security.crypto.MasterKeys;
 import android.annotation.SuppressLint;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -41,6 +41,8 @@ public class SettingsActivity extends AppCompatActivity {
     private String pin = null;
     private String secretKey = null;
 
+    private SharedPreferences sharedPreferences;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,6 +51,8 @@ public class SettingsActivity extends AppCompatActivity {
         getSupportActionBar().hide();
 
         initView();
+        initDataPreferences();
+
         getDataPreferences();
         setupButtonsClickListeners();
         displayTextViewsForBtDevice();
@@ -81,8 +85,24 @@ public class SettingsActivity extends AppCompatActivity {
         btnSaveSecretKey.setOnClickListener(view -> saveSecretKey());
     }
 
+    private void initDataPreferences() {
+        try {
+            String masterKey = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC);
+            sharedPreferences = EncryptedSharedPreferences.create(
+                    MainActivity.PREFS_NAME,
+                    masterKey,
+                    this,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            );
+
+        } catch (Exception e) {
+            displayNotification("Failed to get data preferences");
+            e.printStackTrace();
+        }
+    }
+
     private void getDataPreferences() {
-        SharedPreferences sharedPreferences = getSharedPreferences(MainActivity.PREFS_NAME, MODE_PRIVATE);
         deviceName = sharedPreferences.getString(MainActivity.PREFS_DEVICE_NAME, null);
         deviceAddress = sharedPreferences.getString(MainActivity.PREFS_DEVICE_ADDRESS, null);
         username = sharedPreferences.getString(MainActivity.PREFS_USERNAME, null);
@@ -130,7 +150,6 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void saveCredentials() {
-        SharedPreferences sharedPreferences = this.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
         username = txtEditUsername.getText().toString();
         pin = txtEditPin.getText().toString();
@@ -139,21 +158,21 @@ public class SettingsActivity extends AppCompatActivity {
         editor.putString(MainActivity.PREFS_USERNAME, username);
         editor.putString(MainActivity.PREFS_PIN, pin);
         editor.apply();
+        txtViewCredentialsStatus.setText("Credentials are stored.");
         displayNotification("Credentials saved.");
     }
 
     private void saveSecretKey() {
-        SharedPreferences sharedPreferences = this.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
         secretKey = txtEditSecretKey.getText().toString();
         txtEditSecretKey.setText("");
         editor.putString(MainActivity.PREFS_SECRET_KEY, secretKey);
         editor.apply();
+        txtViewSecretKeyStatus.setText("Key stored.");
         displayNotification("Secret key saved.");
     }
 
     private void cleanPreferencesData() {
-        SharedPreferences sharedPreferences = this.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.clear();
         editor.apply();
