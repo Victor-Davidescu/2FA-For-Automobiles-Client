@@ -76,21 +76,7 @@ public class MainActivity extends AppCompatActivity {
         getDataPreferences(); // Get data preferences
         setupButtonsClickListeners(); // Setup click listeners for all buttons
         initBiometric(); // Initialise biometric sensor
-
-        // Disable vital view components
-        btnConnectDisconnect.setEnabled(false);
-        btnLoginLogout.setEnabled(false);
-        btnSwitch.setEnabled(false);
-        txtViewRPiReply.setText("");
-
-        // Check if all required data is set and enable the connect button
-        if(!checkPrefsData()) {
-            toolbar.setSubtitle("Settings Incomplete");
-
-        } else {
-            toolbar.setSubtitle("Ready to connect");
-            btnConnectDisconnect.setEnabled(true);
-        }
+        stateStart(); // Put the view components in a start state
     }
 
     /**
@@ -191,10 +177,12 @@ public class MainActivity extends AppCompatActivity {
                     case CONNECTING_STATUS:
                         switch(msg.arg1) {
                             case 1:
+                                displayNotification("Connected successfully");
                                 stateConnected();
                                 btnConnectDisconnect.setEnabled(true);
                                 break;
                             case -1:
+                                displayNotification("Failed to connect.");
                                 stateDisconnected();
                                 break;
                         }
@@ -274,6 +262,22 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void stateStart() {
+        // Disable all visual components from the main menu
+        btnConnectDisconnect.setEnabled(false);
+        btnLoginLogout.setEnabled(false);
+        btnSwitch.setEnabled(false);
+        txtViewRPiReply.setText("");
+
+        // Check if all required data is set and enable the connect button
+        if(!checkPrefsData()) {
+            toolbar.setSubtitle("Settings Incomplete");
+
+        } else {
+            stateDisconnected();
+        }
+    }
+
     @SuppressLint("SetTextI18n")
     private void stateConnected() {
         connectedToDevice = true;
@@ -288,8 +292,9 @@ public class MainActivity extends AppCompatActivity {
     private void stateDisconnected() {
         connectedToDevice = false;
         stateLoggedOut();
-        toolbar.setSubtitle("Disconnected.");
+        toolbar.setSubtitle("Not Connected.");
         btnConnectDisconnect.setText("connect");
+        btnConnectDisconnect.setEnabled(true);
         btnLoginLogout.setEnabled(false);
     }
 
@@ -298,6 +303,7 @@ public class MainActivity extends AppCompatActivity {
      */
     @SuppressLint("SetTextI18n")
     private void stateLoggedIn() {
+        displayNotification("Login successful.");
         loggedIn = true;
         btnLoginLogout.setText("logout");
         btnSwitch.setEnabled(true);
@@ -308,6 +314,7 @@ public class MainActivity extends AppCompatActivity {
      */
     @SuppressLint("SetTextI18n")
     private void stateLoggedOut() {
+        displayNotification("Logged out.");
         loggedIn = false;
         btnLoginLogout.setText("login");
         btnSwitch.setEnabled(false);
