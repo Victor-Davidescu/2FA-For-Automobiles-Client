@@ -103,7 +103,7 @@ public class ClientBluetoothThread extends Thread {
         String encryptedMsg = Encryption.EncryptMessage(key, msg); // Encrypt msg
 
         if (encryptedMsg != null) {
-            byte[] bytes = msg.getBytes();
+            byte[] bytes = encryptedMsg.getBytes();
             try {
                 btOutStream.write(bytes);
             } catch (IOException e) {
