@@ -2,8 +2,10 @@
 //  AUTHOR: VICTOR-FLORIAN DAVIDESCU
 //  SID: 1705734
 //
-//  The code is a modified version from the GitHub project: https://github.com/ijl20/python_java_crypto
-// TODO: add a proper ARU HARVARD REFERENCING HERE
+//  Code Reference:
+//  Lewis, R., 2019. Compatible AES encrypt/decrypt in Python and Java. [online]
+//  Available at: <https://github.com/ijl20/python_java_crypto> [Accessed 20 July 2022].
+//
 ////////////////////////////////////////////////////////////////////////////////////////////////
 package com.myapp;
 
