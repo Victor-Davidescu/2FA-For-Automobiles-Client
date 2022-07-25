@@ -189,7 +189,6 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Handler for receiving bluetooth messages from BT device.
-     *
      * Code template obtained from:
      * Anon., 2022. Droiduino Bluetooth Connection. [online] GitHub.
      *      Available at: <https://github.com/Hype47/droiduino/tree/master/DroiduinoBluetoothConnection>
