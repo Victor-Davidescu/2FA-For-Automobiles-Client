@@ -189,7 +189,11 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Handler for receiving bluetooth messages from BT device.
-     * Reference: https://github.com/Hype47/droiduino/tree/master/DroiduinoBluetoothConnection
+     *
+     * Code template obtained from:
+     * Anon., 2022. Droiduino Bluetooth Connection. [online] GitHub.
+     *      Available at: <https://github.com/Hype47/droiduino/tree/master/DroiduinoBluetoothConnection>
+     *      [Accessed 25 July 2022].
      */
     private void mainLoop() {
         handler = new Handler(Looper.getMainLooper()) {
@@ -211,7 +215,7 @@ public class MainActivity extends AppCompatActivity {
                         break;
 
                     case MESSAGE_READ:
-                        String rpiMsg = msg.obj.toString(); // Read message from Arduino
+                        String rpiMsg = msg.obj.toString(); // Read message from RaspberryPi
                         rpiMsg = rpiMsg.replaceAll("[\\n\\t ]", ""); //remove newline
                         rpiMsg = Encryption.DecryptMessage(secretKey, rpiMsg);
                         processReplyMsg(rpiMsg);
